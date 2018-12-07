@@ -17,7 +17,7 @@ from gradient_and_color_libary import *
 # The following globals are designed to make development/debug easier.  In a more real world enviornment,
 # Both of these would be turned off.
 DEBUG = 1 # A switch for print statements.  Turn off to make the script not print out anything
-OUTPUT_STEPS = 1 # A switch for writing out files.  Turn on to output images from each individual step.
+OUTPUT_STEPS = 0 # A switch for writing out files.  Turn on to output images from each individual step.
 
 # Program Globals:
 G_TEST_IMAGE_FOLDER = './test_images/test*.jpg'
@@ -120,17 +120,19 @@ def line_tracker_windows(warped, idx, window_width = G_WINDOW_WIDTH, window_heig
 def get_lane_lines(res_yvals, yvals, leftx, rightx, window_width = G_WINDOW_WIDTH):
     """
     This function finds the lane line using polyfit
-    Polyfit finds the coefficients, using a degree of 2
+    Polyfit finds the coefficients, for example:
+    using a degree of 2
     ax^2 + bx + c
     left_fit is now an array with [a,b,c]
+    This function uses a 4th degree polynomial
     """
-    left_fit = np.polyfit(res_yvals, leftx, 2)
-    left_fitx = left_fit[0] * yvals * yvals + left_fit[1] * yvals + left_fit[2]
+    left_fit = np.polyfit(res_yvals, leftx, 4)
+    left_fitx = left_fit[0] * yvals * yvals * yvals * yvals + left_fit[1] * yvals * yvals * yvals + left_fit[2]* yvals * yvals + left_fit[3] * yvals + left_fit[4]
     left_fitx = np.array(left_fitx, np.int32)
     # Do the same polyfit on the right
     # Next Polyfit the right
-    right_fit = np.polyfit(res_yvals, rightx, 2)
-    right_fitx = right_fit[0]* yvals * yvals + right_fit[1] * yvals + right_fit[2]
+    right_fit = np.polyfit(res_yvals, rightx, 4)
+    right_fitx = right_fit[0] * yvals * yvals * yvals * yvals + right_fit[1] * yvals * yvals * yvals + right_fit[2]* yvals * yvals + right_fit[3] * yvals + right_fit[4]
     right_fitx = np.array(right_fitx, np.int32)
     # package up left lane and right lane
     left_lane = np.array(list(zip(np.concatenate((left_fitx-window_width/2,left_fitx[::-1]+window_width/2),axis=0), np.concatenate((yvals,yvals[::-1]),axis=0))),np.int32)
@@ -174,10 +176,7 @@ def window_mask(width, height, img_ref, center, level):
 # This will get called when attempting to run this script as a script
 # ie ./image_gen.py
 ##########################################################################
-def image_pipeline(mtx, dist, fname):
-    # Read in the file
-    img = cv2.imread(fname)
-
+def image_pipeline(mtx, dist, img, idx = 0):
     # undistort the image
     img = undistort(mtx, dist, img)
 
@@ -242,4 +241,7 @@ if __name__ == "__main__":
     for idx, fname in enumerate(images):
         if DEBUG == 1:
             print("Looking at file: " + fname + " with idx of: " + str(idx+1))
+        # Read in the file
+        img = cv2.imread(fname)
+        # Pass it to the pipeline
         image_pipeline(mtx, dist, fname)
