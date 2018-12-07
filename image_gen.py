@@ -1,6 +1,8 @@
 #!/usr/bin/env python 
 """
 A python script for the Udacity Project Advanced Lane Lines
+
+This file is meant to be used with images, like the test images provided
 """
 import numpy as np
 import cv2
@@ -17,8 +19,8 @@ from gradient_and_color_libary import *
 DEBUG = 1 # A switch for print statements.  Turn off to make the script not print out anything
 OUTPUT_STEPS = 1 # A switch for writing out files.  Turn on to output images from each individual step.
 
-# Hyperparameters:
-
+# Program Globals:
+G_TEST_IMAGE_FOLDER = './test_images/test*.jpg'
 # Offset for warping
 G_OFFSET = .25
 # Trapezoid Globals
@@ -133,7 +135,9 @@ def get_lane_lines(res_yvals, yvals, leftx, rightx, window_width = G_WINDOW_WIDT
     # package up left lane and right lane
     left_lane = np.array(list(zip(np.concatenate((left_fitx-window_width/2,left_fitx[::-1]+window_width/2),axis=0), np.concatenate((yvals,yvals[::-1]),axis=0))),np.int32)
     right_lane = np.array(list(zip(np.concatenate((right_fitx-window_width/2,right_fitx[::-1]+window_width/2),axis=0),  np.concatenate((yvals,yvals[::-1]),axis=0))), np.int32)
-    return left_lane, right_lane, left_fitx, right_fitx
+    inner_lane = np.array(list(zip(np.concatenate((left_fitx+window_width/2,right_fitx[::-1]-window_width/2),axis=0),  np.concatenate((yvals,yvals[::-1]),axis=0))), np.int32)
+
+    return left_lane, right_lane, inner_lane, left_fitx, right_fitx
 
 def get_offset_from_center(left_fitx, right_fitx, warped, xm = G_XM):
     camera_center = (left_fitx[-1] + right_fitx[-1])/2 
@@ -166,81 +170,76 @@ def window_mask(width, height, img_ref, center, level):
     return output
 
 ##########################################################################
-# The following is a pipeline, designed for use with the test files.
+# The following is a pipeline, designed for use with images
 # This will get called when attempting to run this script as a script
 # ie ./image_gen.py
 ##########################################################################
-def test_pipeline(mtx, dist, glob_image_path):
-    images = glob.glob(glob_image_path)
+def image_pipeline(mtx, dist, fname):
+    # Read in the file
+    img = cv2.imread(fname)
+
+    # undistort the image
+    img = undistort(mtx, dist, img)
+
+    # Apply our color and graident thresholds
+    thresh_image = thresholds(img, idx)
+    img_size = (img.shape[1], img.shape[0])
+
+    # Warp the image
+    M, M_inverse, warped = warp_image(thresh_image, img_size, idx)
+
+    # Use window sliding to find the lines
+    leftx, rightx, yvals, res_yvals = line_tracker_windows(warped, idx)
+
+    left_lane, right_lane, inner_lane, left_fitx, right_fitx = get_lane_lines(res_yvals, yvals, leftx, rightx)
+
+    # The following Code Draws the Lane Lines found above onto an image.
+    # Draw the lane lines
+    road = np.zeros_like(img)
+    cv2.fillPoly(road, [left_lane], color = [255, 0, 0])
+    cv2.fillPoly(road, [inner_lane], color = [0, 255, 0])
+    cv2.fillPoly(road, [right_lane], color = [0, 0, 255])
+    road_warped = cv2.warpPerspective(road, M_inverse, img_size, flags=cv2.INTER_LINEAR)
+    # isolate the background so that we can more clearly see the lines
+    road_bkg = np.zeros_like(img)
+    cv2.fillPoly(road_bkg,[left_lane], color=[255,255,255])
+    cv2.fillPoly(road_bkg,[right_lane], color=[255,255,255])
+    road_warped_bkg = cv2.warpPerspective(road_bkg, M_inverse, img_size, flags=cv2.INTER_LINEAR)
+    # Create the image to output
+    lane_lines_drawn_base = cv2.addWeighted(img, 1.0, road_warped_bkg, -1.0, 0.0)
+    lane_lines_drawn = cv2.addWeighted(lane_lines_drawn_base, 1.0, road_warped, 1.0, 0.0)
+    if OUTPUT_STEPS == 1:
+        write_name = './test_images/lane_lines_drawn' + str(idx+1) + '.jpg'
+        print("Writing file: " + write_name)
+        cv2.imwrite(write_name, lane_lines_drawn)
+
+    # calculate the offset of the car
+    center_diff = get_offset_from_center(left_fitx, right_fitx, warped)
+    # get the position of the offset(left or right of center)
+    side_pos = get_side_position(center_diff)
+    # Get the curvature of the left lane line
+    curve_rad = get_left_curvature(res_yvals, yvals, leftx)
+    if DEBUG == 1:
+        print("Curve Radius is " + str(curve_rad))
+        print("Side Position is " + side_pos)
+        print("Center offset is " + str(center_diff))
+    # Add text to the image we are returning
+    cv2.putText(lane_lines_drawn, 'Radius of Curvature is ' + str(round(abs(curve_rad),3)), (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
+    cv2.putText(lane_lines_drawn, 'Vehicle is ' + str(round(abs(center_diff),3)) + ' meters ' + side_pos + ' of center', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
+    if OUTPUT_STEPS == 1:
+        write_name = './test_images/curvature_offset_and_speed' + str(idx+1) + '.jpg'
+        print("Writing file: " + write_name)
+        cv2.imwrite(write_name, lane_lines_drawn)
+    return lane_lines_drawn
+
+if __name__ == "__main__":
+    # Calibrate Camera.  Note that our chess board is 6x9
+    mtx, dist = camera_calibration(6, 9 ,'./camera_cal/calibration*.jpg')
+    #  Run Our Pipeline on each image
+    images = glob.glob(G_TEST_IMAGE_FOLDER)
     # sort the array so that the images are in order of their number
     images.sort()
     for idx, fname in enumerate(images):
         if DEBUG == 1:
             print("Looking at file: " + fname + " with idx of: " + str(idx+1))
-        # Read in the file
-        img = cv2.imread(fname)
-
-        # undistort the image
-        img = undistort(mtx, dist, img)
-
-        # Apply our color and graident thresholds
-        thresh_image = thresholds(img, idx)
-        img_size = (img.shape[1], img.shape[0])
-
-        # Warp the image
-        M, M_inverse, warped = warp_image(thresh_image, img_size, idx)
-
-        # Use window sliding to find the lines
-        leftx, rightx, yvals, res_yvals = line_tracker_windows(warped, idx)
-
-        left_lane, right_lane, left_fitx, right_fitx = get_lane_lines(res_yvals, yvals, leftx, rightx)
-
-        if OUTPUT_STEPS == 1:
-            # The following Code Draws the Lane Lines found above onto an image.
-            # Draw the lane lines
-            road = np.zeros_like(img)
-            cv2.fillPoly(road, [left_lane], color = [255, 0, 0])
-            cv2.fillPoly(road, [right_lane], color = [0, 0, 255])
-            road_warped = cv2.warpPerspective(road, M_inverse, img_size, flags=cv2.INTER_LINEAR)
-            # isolate the background so that we can more clearly see the lines
-            road_bkg = np.zeros_like(img)
-            cv2.fillPoly(road_bkg,[left_lane], color=[255,255,255])
-            cv2.fillPoly(road_bkg,[right_lane], color=[255,255,255])
-            road_warped_bkg = cv2.warpPerspective(road_bkg, M_inverse, img_size, flags=cv2.INTER_LINEAR)
-            # Create the image to output
-            lane_lines_drawn_base = cv2.addWeighted(img, 1.0, road_warped_bkg, -1.0, 0.0)
-            lane_lines_drawn = cv2.addWeighted(lane_lines_drawn_base, 1.0, road_warped, 1.0, 0.0)
-            write_name = './test_images/lane_lines_drawn' + str(idx+1) + '.jpg'
-            print("Writing file: " + write_name)
-            cv2.imwrite(write_name, lane_lines_drawn)
-    
-        # calculate the offset of the car
-        center_diff = get_offset_from_center(left_fitx, right_fitx, warped)
-        # get the position of the offset(left or right of center)
-        side_pos = get_side_position(center_diff)
-        # Get the curvature of the left lane line
-        curve_rad = get_left_curvature(res_yvals, yvals, leftx)
-        if DEBUG == 1:
-            print("Curve Radius is " + str(curve_rad))
-            print("Side Position is " + side_pos)
-            print("Center offset is " + str(center_diff))
-        if OUTPUT_STEPS == 1:
-            cv2.putText(lane_lines_drawn, 'Radius of Curvature is ' + str(round(abs(curve_rad),3)), (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
-            cv2.putText(lane_lines_drawn, 'Vehicle is ' + str(round(abs(center_diff),3)) + ' meters ' + side_pos + ' of center', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
-            write_name = './test_images/curvature_offset_and_speed' + str(idx+1) + '.jpg'
-            print("Writing file: " + write_name)
-            cv2.imwrite(write_name, lane_lines_drawn)
-
-if __name__ == "__main__":
-    # This project requires us to do the following steps:
-    # 1) Camera Calibration
-    # 2) Undistortion
-    # 3) Color and Gradient Threshold
-    # 4) Warp using Perspective Transform
-
-    # Step 1: Calibrate Camera.  Note that our chess board is 6x9
-    mtx, dist = camera_calibration(6, 9 ,'./camera_cal/calibration*.jpg')
-    # Step 2: Undistort the images and apply thresholds
-    test_pipeline(mtx, dist, './test_images/test*.jpg')
-
-
+        image_pipeline(mtx, dist, fname)
