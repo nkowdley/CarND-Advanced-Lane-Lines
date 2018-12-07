@@ -89,7 +89,7 @@ For this step, I used 3 main transforms:
 1. a color threshold where I used the hsv and hls color spaces.
 
 Here's an example of my output for this step.  Note that this is the same image from before:
-![alt text][test1_threshold]
+![alt text][test1_thresholds]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
