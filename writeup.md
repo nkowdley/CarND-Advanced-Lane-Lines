@@ -147,6 +147,6 @@ Here's a [link to my video result](./output_images/output1_tracked.mp4)
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+####Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+This project was very difficult to tune, seeing as there are a number of parameters that can be used in thresholding and lane fitting.  My approach is definitely the most basic, and will likely have issues in situations with varying light conditions, as well as very curvy roads as my polynomial function only goes to 4.  It would definitely be more robust if I used some light corrections on my input images.  It would also help my lane fitting lines if I were to use machine learning to determine the appropriate line/polynomial order, instead of always fitting to a 4th degree polynomial
