@@ -19,7 +19,7 @@ The goals / steps of this project are the following:
 [chessboard_calculations]:./camera_cal/corners_found11.jpg "CV2 Chessboard"
 [chessboard_undistorted]:./camera_cal/undistorted_chessboard1.jpg "CV2 Chessboard Undistorted"
 [test1]:./test_images/test1.jpg "Original Test Image 1"
-[test1]:./test_images/test2.jpg "Original Test Image 2"
+[test2]:./output_images/curvature_offset_and_pos3.jpg  "another sample"
 [test1_undistorted]:./output_images/undistorted1.jpg "undistorted Image"
 [test1_thresholds]:./output_images/thresh_image1.jpg "threshold Image"
 [test1_warped]:./output_images/warped1.jpg "warped Image"
