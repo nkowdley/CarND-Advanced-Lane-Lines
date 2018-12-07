@@ -130,8 +130,6 @@ Here is what an image looks like overlayed with this information:
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`. 
-
 Here is what this looks like on a different image:
 ![alt text][test2]
 
