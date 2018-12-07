@@ -25,7 +25,7 @@ The goals / steps of this project are the following:
 [test1_warped]:./output_images/warped1.jpg "warped Image"
 [test1_windows]:./output_images/windows1.jpg "window Image"
 [test1_lane_lines]:./output_images/lane_lines_drawn1.jpg "lane lines Image"
-[test1_curve_and_lines]:./output_images/curvature_offset_and_pos1.jpg "curve Image"
+[test1_curve_and_lines]:./output_images/curvature_offset_and_pos2.jpg "curve Image"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
