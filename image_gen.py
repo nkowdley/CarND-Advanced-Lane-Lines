@@ -17,7 +17,7 @@ from gradient_and_color_libary import *
 # The following globals are designed to make development/debug easier.  In a more real world enviornment,
 # Both of these would be turned off.
 DEBUG = 1 # A switch for print statements.  Turn off to make the script not print out anything
-OUTPUT_STEPS = 0 # A switch for writing out files.  Turn on to output images from each individual step.
+OUTPUT_STEPS = 1 # A switch for writing out files.  Turn on to output images from each individual step.
 
 # Program Globals:
 G_TEST_IMAGE_FOLDER = './test_images/test*.jpg'
@@ -36,11 +36,19 @@ G_MARGIN = 25
 G_YM = 10/720 #( 10 meters = 720 pixels)
 G_XM = 4/384 #( 4 meters = 384 pixels)
 
-def undistort(mtx, dist, image):
+def undistort(mtx, dist, image, idx):
     """
     A Simple Wrapper Around the openCV call to undistort
     """
-    return cv2.undistort(image, mtx, dist, None, mtx)
+    undistort = cv2.undistort(image, mtx, dist, None, mtx)
+    if OUTPUT_STEPS == 1:
+        write_name = "./output_images/undistorted" + str(idx) + ".jpg" # This path is hardcoded here
+        cv2.imwrite(write_name,undistort)
+        if DEBUG == 1:
+            print("Writing File: " + write_name)
+
+    return undistort
+
 
 def thresholds(img, idx):
     """
@@ -56,7 +64,7 @@ def thresholds(img, idx):
     c_binary = color_threshold(img, sthresh=(100,255), vthresh=(50,255))
     thresh_image[(gradx == 1) & (grady == 1) | (c_binary == 1 )] = 255
     if OUTPUT_STEPS == 1:
-        write_name = './test_images/preprocessed_image' + str(idx+1) + '.jpg'
+        write_name = './output_images/preprocessed_image' + str(idx+1) + '.jpg'
         print("Writing file: " + write_name)
         cv2.imwrite(write_name, thresh_image)
     return thresh_image
@@ -73,7 +81,7 @@ def warp_image(img, img_size, idx, offset_pct = G_OFFSET):
     M_inverse = cv2.getPerspectiveTransform(dst,src) # used to do the opposite transform
     warped = cv2.warpPerspective(img, M, img_size, flags=cv2.INTER_LINEAR)
     if OUTPUT_STEPS == 1:
-        write_name = './test_images/warped' + str(idx+1) + '.jpg'
+        write_name = './output_images/warped' + str(idx+1) + '.jpg'
         print("Writing file: " + write_name)
         cv2.imwrite(write_name, warped)
     return M, M_inverse, warped
@@ -108,7 +116,7 @@ def line_tracker_windows(warped, idx, window_width = G_WINDOW_WIDTH, window_heig
         warpage = np.array(cv2.merge((warped,warped,warped)), np.uint8)
         # overlay the results
         result = cv2.addWeighted(warpage, 1, template, 0.5, 0.0)
-        write_name = './test_images/windows' + str(idx+1) + '.jpg'
+        write_name = './output_images/windows' + str(idx+1) + '.jpg'
         print("Writing file: " + write_name)
         cv2.imwrite(write_name, result)
 
@@ -178,7 +186,7 @@ def window_mask(width, height, img_ref, center, level):
 ##########################################################################
 def image_pipeline(mtx, dist, img, idx = 0):
     # undistort the image
-    img = undistort(mtx, dist, img)
+    img = undistort(mtx, dist, img, idx)
 
     # Apply our color and graident thresholds
     thresh_image = thresholds(img, idx)
@@ -208,7 +216,7 @@ def image_pipeline(mtx, dist, img, idx = 0):
     lane_lines_drawn_base = cv2.addWeighted(img, 1.0, road_warped_bkg, -1.0, 0.0)
     lane_lines_drawn = cv2.addWeighted(lane_lines_drawn_base, 1.0, road_warped, 1.0, 0.0)
     if OUTPUT_STEPS == 1:
-        write_name = './test_images/lane_lines_drawn' + str(idx+1) + '.jpg'
+        write_name = './output_images/lane_lines_drawn' + str(idx+1) + '.jpg'
         print("Writing file: " + write_name)
         cv2.imwrite(write_name, lane_lines_drawn)
 
@@ -226,7 +234,7 @@ def image_pipeline(mtx, dist, img, idx = 0):
     cv2.putText(lane_lines_drawn, 'Radius of Curvature is ' + str(round(abs(curve_rad),3)), (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
     cv2.putText(lane_lines_drawn, 'Vehicle is ' + str(round(abs(center_diff),3)) + ' meters ' + side_pos + ' of center', (50,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2 )
     if OUTPUT_STEPS == 1:
-        write_name = './test_images/curvature_offset_and_speed' + str(idx+1) + '.jpg'
+        write_name = './output_images/curvature_offset_and_pos' + str(idx+1) + '.jpg'
         print("Writing file: " + write_name)
         cv2.imwrite(write_name, lane_lines_drawn)
     return lane_lines_drawn
@@ -244,4 +252,4 @@ if __name__ == "__main__":
         # Read in the file
         img = cv2.imread(fname)
         # Pass it to the pipeline
-        image_pipeline(mtx, dist, fname)
+        image_pipeline(mtx, dist, img, idx+1)

@@ -53,3 +53,22 @@ def camera_calibration(rows, cols, glob_image_path):
     img_size = (img.shape[1], img.shape[0])
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints,imgpoints, img_size, None, None)
     return mtx, dist
+
+def chess_undistort(mtx, dist, image, idx):
+    """
+    A Simple Wrapper Around the openCV call to undistort
+    """
+    undistort = cv2.undistort(image, mtx, dist, None, mtx)
+    if OUTPUT_STEPS == 1:
+        write_name = "./camera_cal/undistorted_chessboard" + str(idx) + ".jpg" # This path is hardcoded here
+        cv2.imwrite(write_name,undistort)
+        if DEBUG == 1:
+            print("Writing File: " + write_name)
+
+
+if __name__ == "__main__":
+    # Calibrate Camera.  Note that our chess board is 6x9
+    mtx, dist = camera_calibration(6, 9 ,'./camera_cal/calibration*.jpg')
+    #  Undistort the calibration image and write it out to a file
+    image = cv2.imread('./camera_cal/calibration2.jpg')
+    chess_undistort(mtx, dist, image, 1)
